@@ -1,98 +1,105 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Task List Manager</title>
-    <link rel="stylesheet" type="text/css" href="main.css">
-</head>
-<body>
-    <header>
-        <h1>Task List Manager</h1>
-    </header>
-
-    <main>
-        <!-- want to print the array of the list --> 
-        <p><?php print_r($task_list); ?></p>
+<?php
+//get tasklist array from POST
+$task_list = filter_input(INPUT_POST, 'tasklist', 
+        FILTER_DEFAULT, FILTER_REQUIRE_ARRAY);
+if ($task_list === NULL) {
+    $task_list = array();
+    
+    // add some hard-coded starting values to make testing easier
+    $task_list[] = 'Write chapter';
+    $task_list[] = 'Edit chapter';
+    $task_list[] = 'Proofread chapter';
+}
+//get action variable from POST
+$action = filter_input(INPUT_POST, 'action');
+//initialize error messages array
+$errors = array();
+//process
+switch( $action ) {
+    case 'Add Task':
+        $new_task = filter_input(INPUT_POST, 'newtask');
+        if (empty($new_task)) {
+            $errors[] = 'The new task cannot be empty.';
+        } else {
+           // $task_list[] = $new_task;
+            array_push($task_list, $new_task);
+        }
+        break;
+    case 'Delete Task':
+        $task_index = filter_input(INPUT_POST, 'taskid', FILTER_VALIDATE_INT);
+        if ($task_index === NULL || $task_index === FALSE) {
+            $errors[] = 'The task cannot be deleted.';
+        } else {
+            unset($task_list[$task_index]);
+            $task_list = array_values($task_list);
+        }
+        break;
         
         
-        <!-- part 1: the errors -->
-        <?php if (count($errors) > 0) : ?>
-        <h2>Errors:</h2>
-        <ul>
-            <?php foreach($errors as $error) : ?>
-                <li><?php echo $error; ?></li>
-            <?php endforeach; ?>
-        </ul>
-        <?php endif; ?>
-
-        <!-- part 2: the tasks -->
-        <h2>Tasks:</h2>
-        <?php if (count($task_list) == 0) : ?>
-            <p>There are no tasks in the task list.</p>
-        <?php else: ?>
-            <ul>
-            <?php foreach( $task_list as $id => $task ) : ?>
-                <li><?php echo $id + 1 . '. ' . $task; ?></li>
-            <?php endforeach; ?>
-            </ul>           
-        <?php endif; ?>
-        <br>
-
-        <!-- part 3: the add form -->
-        <h2>Add Task:</h2>
-        <form action="." method="post" >
-            <?php foreach( $task_list as $task ) : ?>
-              <input type="hidden" name="tasklist[]" value="<?php echo $task; ?>">
-            <?php endforeach; ?>
-            <label>Task:</label>
-            <input type="text" name="newtask" id="newtask"> <br>
-            <label>&nbsp;</label>
-            <input type="submit" name="action" value="Add Task">
-        </form>
-        <br>
-
-        <!-- part 4: the modify/promote/delete form -->
-        <?php if (count($task_list) > 0 && empty($task_to_modify)) : ?>
-        <h2>Select Task:</h2>
-        <form action="." method="post" >
-            <?php foreach( $task_list as $task ) : ?>
-              <input type="hidden" name="tasklist[]" value="<?php echo $task; ?>">
-            <?php endforeach; ?>
-            <label>Task:</label>
-            <select name="taskid">
-                <?php foreach( $task_list as $id => $task ) : ?>
-                    <option value="<?php echo $id; ?>">
-                        <?php echo $task; ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-            <br>
-            <label>&nbsp;</label>
-            <input type="submit" name="action" value="Modify Task">
-            <input type="submit" name="action" value="Promote Task">
-            <input type="submit" name="action" value="Delete Task">
-
-            <br>
-            <label>&nbsp;</label>
-            <input type="submit" name="action" value="Sort Tasks">
-        </form>
-        <?php endif; ?>
-
-        <!-- part 5: the modify save/cancel form -->
-        <?php if (!empty($task_to_modify)) : ?>
-        <h2>Task to Modify:</h2>
-        <form action="." method="post" >
-            <?php foreach( $task_list as $task ) : ?>
-              <input type="hidden" name="tasklist[]" value="<?php echo $task; ?>">
-            <?php endforeach; ?>
-            <label>Task:</label>
-            <input type="hidden" name="modifiedtaskid" value="<?php echo $task_index; ?>">
-            <input type="text" name="modifiedtask" value="<?php echo $task_to_modify; ?>"><br>
-            <label>&nbsp;</label>
-            <input type="submit" name="action" value="Save Changes">
-            <input type="submit" name="action" value="Cancel Changes">
-        </form>
-        <?php endif; ?>
-
-    </main>
-</body>
-</html>
+    case 'Sort Tasks':
+        sort($task_list);
+        break;
+    
+    case 'Modify Task':
+        $task_index = filter_input(INPUT_POST, 'taskid', FILTER_VALIDATE_INT);
+        $new_task = filter_input(INPUT_POST, 'newtask');
+        if($task_index === NULL || $task_index === FALSE)
+        {
+            $errors[] = 'This task cannot be modified';
+        }
+        else
+        {
+            //SELECT THE ITEM THAT WE WANT TO MODIFY
+            $task_to_modify = $task_list[$task_index];
+        }
+        break;
+    case 'Save Changes':
+        $i=filter_input(INPUT_POST, 'modifiedtaskid', FILTER_VALIDATE_INT);
+        $modified_task = filter_input(INPUT_POST, 'modifiedtask');
+        if(empty($modified_task))
+        {
+            $errors[] = 'The task cannot be empty';
+        }
+        else if ($i === NULL || $i ===FALSE)
+        {
+            $errors[] ='The task cannot be modified.';
+        }
+        else 
+        {
+            $task_list[$i] = $modified_task;
+            $modified_task='';
+        }
+        break;
+    
+    case 'Cancel Changes':
+        break;
+        
+    case 'Promote Task':
+        /* move up the selected task by one index of array
+        if the user select the first task this code should be display*/
+         $task_index = filter_input(INPUT_POST, 'taskid', FILTER_VALIDATE_INT);
+        if ($task_index === 0 || $task_index === FALSE) {
+            $errors[] = 'The task cannot be promoted.';
+        } else {
+            $temp = $task_list[$task_index];
+            $task_list[$task_index] = $task_list[$task_index-1];
+            $task_list[$task_index-1] = $temp;
+           
+        }
+        break;
+        
+/*
+    case 'Modify Task':
+    
+    case 'Save Changes':
+    
+    case 'Cancel Changes':
+    
+    case 'Promote Task':
+        
+    case 'Sort Tasks':
+    
+*/
+}
+include('task_list.php');
+?>
